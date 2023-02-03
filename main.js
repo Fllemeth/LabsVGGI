@@ -137,53 +137,34 @@ function CreateSurfaceData() {
 
     return vertexList;
 }
+
+
 function CreateNormals() {
     let normals = [];
-    let uMax = Math.PI * 2
-    let vMax = Math.PI / 2
-    let uStep = uMax * 0.005;
-    let vStep = vMax * 0.005;
+    let step = 1;
+    let uend = 347 + step;
+    let vend = 347 + step;
+    let DeltaU = 0.001;
+    let DeltaV = 0.001;
 
-    for (let u = 0; u <= uMax; u += uStep) {
-        for (let v = 0; v <= vMax; v += vStep) {
-            let vert = corSphere(u, v)
-            let avert = corSphere(u + uStep, v)
-            let bvert = corSphere(u, v + vStep)
-            let cvert = corSphere(u + uStep, v + vStep)
-            let verta0 = { x: avert.x - vert.x, y: avert.y - vert.y, z: avert.z - vert.z }
-            let vertb0 = { x: bvert.x - vert.x, y: bvert.y - vert.y, z: bvert.z - vert.z }
-            let vertca = { x: cvert.x - avert.x, y: cvert.y - avert.y, z: cvert.z - avert.z }
-            let vertba = { x: bvert.x - avert.x, y: bvert.y - avert.y, z: bvert.z - avert.z }
-            let norm = vec3Cross(verta0, vertb0)
-            vec3Normalize(norm)
-            let norma = vec3Cross(vertca, vertba)
-            vec3Normalize(norma)
-            normals.push(norm.x, norm.y, norm.z)
-            normals.push(norm.x, norm.y, norm.z)
-            normals.push(norm.x, norm.y, norm.z)
-            normals.push(norma.x, norma.y, norma.z)
-            normals.push(norma.x, norma.y, norma.z)
-            normals.push(norma.x, norma.y, norma.z)
+    for (let u = 0; u < uend; u += step) {
+        for (let v = 0; v < vend; v += step) {
+            let unext = u + step; 
+            let DerivativeU = CalcDerivativeU(u, v, DeltaU);
+            let DerivativeV = CalcDerivativeV(u, v, DeltaV);
+
+            let result = m4.cross(DerivativeV, DerivativeU);
+            normals.push(result[0], result[1], result[2]);
+
+            DerivativeU = CalcDerivativeU(unext, v, DeltaU);
+            DerivativeV = CalcDerivativeV(unext, v, DeltaV);
+
+            result = m4.cross(DerivativeV, DerivativeU);
+            normals.push(result[0], result[1], result[2]);
         }
     }
 
     return normals;
-}
-
-function vec3Cross(a, b) {
-    let x = a.y * b.z - b.y * a.z;
-    let y = a.z * b.x - b.z * a.x;
-    let z = a.x * b.y - b.x * a.y;
-    return {
-        x: x,
-        y: y,
-        z: z
-    }
-}
-
-function vec3Normalize(a) {
-    var mag = Math.sqrt(a.x * a.x + a.y * a.y + a.z * a.z);
-    a.x /= mag; a.y /= mag; a.z /= mag;
 }
 
 const R = 1;
@@ -198,6 +179,50 @@ function corSphere(u, v) {
         y: y,
         z: z
     };
+}
+
+function GetFuncX(u, v) {
+  return (R * Math.cos(v) - a * (1 - Math.sin(v)) * Math.abs(Math.cos(n * u))) * Math.cos(u)
+}
+
+function GetFuncY(u, v) {
+  return  (R * Math.cos(v) - a * (1 - Math.sin(v)) * Math.abs(Math.cos(n * u))) * Math.sin(u);
+}
+
+function GetFuncZ(u, v) {
+  return R * Math.sin(v);
+}
+
+function CalcDerivativeU(u, v, uDelta) {
+    let x = GetFuncX(u, v);
+    let y = GetFuncY(u, v);
+    let z = GetFuncZ(u, v);
+
+    let Dx = GetFuncX(u + uDelta, v);
+    let Dy = GetFuncY(u + uDelta, v);
+    let Dz = GetFuncZ(u + uDelta, v);
+
+    let Dxdu = (Dx - x) / deg2rad(uDelta);
+    let Dydu = (Dy - y) / deg2rad(uDelta);
+    let Dzdu = (Dz - z) / deg2rad(uDelta);
+
+    return [Dxdu, Dydu, Dzdu];
+}
+
+function CalcDerivativeV(u, v, vDelta) {
+    let x = GetFuncX(u, v);
+    let y = GetFuncY(u, v);
+    let z = GetFuncZ(u, v);
+
+    let Dx = GetFuncX(u, v + vDelta);
+    let Dy = GetFuncY(u, v + vDelta);
+    let Dz = GetFuncZ(u, v + vDelta);
+
+    let Dxdv = (Dx - x) / deg2rad(vDelta);
+    let Dydv = (Dy - y) / deg2rad(vDelta);
+    let Dzdv = (Dz - z) / deg2rad(vDelta);
+
+    return [Dxdv, Dydv, Dzdv];
 }
 
 
